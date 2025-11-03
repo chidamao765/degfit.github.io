@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>非线性曲线拟合工具</title>
+    <title>fit tool</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
     <style>
@@ -240,7 +240,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- 左侧控制面板 -->
         <div class="panel left-panel">
             <div class="panel-title">参数设置</div>
             
@@ -341,8 +340,7 @@
             </div>
         </div>
         
-        <!-- 右侧数据输入与可视化 -->
-        <div class="panel right-panel">
+         <div class="panel right-panel">
             <div class="panel-title">数据输入与可视化</div>
             
             <div class="data-input-section">
@@ -357,12 +355,12 @@
     </div>
 
     <script>
-        // 全局变量
+
         let xData = [];
         let yData = [];
         let chart = null;
         
-        // 初始化图表
+
         function initChart() {
             const ctx = document.getElementById('fittingChart').getContext('2d');
             chart = new Chart(ctx, {
@@ -413,13 +411,13 @@
             });
         }
         
-        // 生成输入框
+
         function generateInputFields() {
             const numPoints = parseInt(document.getElementById('numPoints').value);
             const container = document.getElementById('dataInputContainer');
             container.innerHTML = '';
             
-            // 生成X数据（等间距）
+
             xData = [];
             yData = [];
             for (let i = 0; i < numPoints; i++) {
@@ -427,11 +425,11 @@
                 yData.push(0);
             }
             
-            // 创建数据表格
+
             const table = document.createElement('div');
             table.className = 'data-table';
             
-            // 表头行
+
             const headerRow = document.createElement('div');
             headerRow.className = 'data-row';
             headerRow.innerHTML = '<div class="data-cell data-header">序号</div>';
@@ -440,7 +438,7 @@
             }
             table.appendChild(headerRow);
             
-            // X值行
+
             const xRow = document.createElement('div');
             xRow.className = 'data-row';
             xRow.innerHTML = '<div class="data-cell data-header">X值</div>';
@@ -449,7 +447,7 @@
             }
             table.appendChild(xRow);
             
-            // Y值行
+
             const yRow = document.createElement('div');
             yRow.className = 'data-row';
             yRow.innerHTML = '<div class="data-cell data-header">Y值</div>';
@@ -460,29 +458,29 @@
             
             container.appendChild(table);
             
-            // 自动执行拟合
+
             performFitting();
         }
         
-        // 更新X数据
+
         function updateXData(index, value) {
             xData[index] = parseFloat(value);
             performFitting();
         }
         
-        // 更新Y数据
+
         function updateYData(index, value) {
             yData[index] = parseFloat(value);
             performFitting();
         }
         
-        // 自定义函数
+
         function customFunction(params, t) {
             const [C, C1, C2, k] = params;
             return C + C1 / (Math.exp(-k * t) + C2);
         }
         
-        // Levenberg-Marquardt 算法简化实现
+
         function lsqcurvefit(func, initialGuess, xData, yData, maxIter = 1000) {
             let params = [...initialGuess];
             const lambda = 0.01;
@@ -492,7 +490,7 @@
                 const residuals = xData.map((x, i) => yData[i] - func(params, x));
                 const sse = residuals.reduce((sum, r) => sum + r * r, 0);
                 
-                // 计算雅可比矩阵（数值微分）
+
                 const jacobian = [];
                 for (let i = 0; i < xData.length; i++) {
                     const row = [];
@@ -507,7 +505,7 @@
                     jacobian.push(row);
                 }
                 
-                // 使用math.js求解
+
                 try {
                     const J = math.matrix(jacobian);
                     const JT = math.transpose(J);
@@ -516,7 +514,7 @@
                     const JTJ = math.multiply(JT, J);
                     const JTr = math.multiply(JT, r);
                     
-                    // 添加阻尼
+
                     for (let i = 0; i < params.length; i++) {
                         JTJ.set([i, i], JTJ.get([i, i]) * (1 + lambda));
                     }
@@ -524,7 +522,7 @@
                     const delta = math.lusolve(JTJ, JTr);
                     const newParams = params.map((p, i) => p + delta.get([i, 0]));
                     
-                    // 检查改进
+
                     const newResiduals = xData.map((x, i) => yData[i] - func(newParams, x));
                     const newSse = newResiduals.reduce((sum, r) => sum + r * r, 0);
                     
@@ -543,14 +541,14 @@
             return params;
         }
         
-        // 执行拟合
+
         function performFitting() {
             if (xData.length === 0 || yData.length === 0) {
                 return;
             }
             
             try {
-                // 获取初始参数
+
                 const initialGuess = [
                     parseFloat(document.getElementById('paramC').value),
                     parseFloat(document.getElementById('paramC1').value),
@@ -558,28 +556,28 @@
                     parseFloat(document.getElementById('paramK').value)
                 ];
                 
-                // 执行拟合
+
                 const fitParams = lsqcurvefit(customFunction, initialGuess, xData, yData);
                 
-                // 计算R²
+
                 const yFit = xData.map(x => customFunction(fitParams, x));
                 const SSE = yData.reduce((sum, y, i) => sum + Math.pow(y - yFit[i], 2), 0);
                 const yMean = yData.reduce((sum, y) => sum + y, 0) / yData.length;
                 const SST = yData.reduce((sum, y) => sum + Math.pow(y - yMean, 2), 0);
                 const R2 = 1 - SSE / SST;
                 
-                // 更新结果显示
+
                 document.getElementById('resultC').value = fitParams[0].toFixed(6);
                 document.getElementById('resultC1').value = fitParams[1].toFixed(6);
                 document.getElementById('resultC2').value = fitParams[2].toFixed(6);
                 document.getElementById('resultK').value = fitParams[3].toFixed(6);
                 document.getElementById('resultR2').value = R2.toFixed(8);
                 
-                // 更新方程显示
+
                 document.getElementById('equationDisplay').innerHTML = 
                     `y = ${fitParams[0].toFixed(4)} + ${fitParams[1].toFixed(4)}/(e<sup>-${fitParams[3].toFixed(4)}t</sup> + ${fitParams[2].toFixed(4)})`;
                 
-                // 生成拟合曲线数据
+
                 const tFit = [];
                 const wFit = [];
                 const minX = Math.min(...xData);
@@ -590,7 +588,7 @@
                     wFit.push(customFunction(fitParams, t));
                 }
                 
-                // 更新图表
+
                 chart.data.datasets[0].data = xData.map((x, i) => ({x: x, y: yData[i]}));
                 chart.data.datasets[1].data = tFit.map((t, i) => ({x: t, y: wFit[i]}));
                 chart.options.plugins.title.text = `非线性曲线拟合 (R² = ${R2.toFixed(6)})`;
@@ -601,7 +599,6 @@
             }
         }
         
-        // 文件导入处理
         document.getElementById('fileInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -628,7 +625,7 @@
                         document.querySelector('input[name="dataSource"][value="file"]').checked = true;
                         generateInputFields();
                         
-                        // 更新输入框的值
+
                         for (let i = 0; i < xData.length; i++) {
                             document.getElementById(`x${i}`).value = xData[i].toFixed(4);
                             document.getElementById(`y${i}`).value = yData[i].toFixed(4);
@@ -645,7 +642,7 @@
             reader.readAsText(file);
         });
         
-        // 显示提示信息
+
         function showAlert(type, message) {
             const alertId = type === 'success' ? 'successAlert' : 'errorAlert';
             const alert = document.getElementById(alertId);
@@ -656,7 +653,7 @@
             }, 3000);
         }
         
-        // 初始化
+
         window.onload = function() {
             initChart();
             generateInputFields();
