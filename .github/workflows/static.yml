@@ -1,43 +1,666 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>非线性曲线拟合工具</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1700px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1.2fr 2fr;
+            gap: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .panel {
+            padding: 20px;
+        }
+        
+        .panel-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #0066cc;
+            color: #333;
+        }
+        
+        .left-panel {
+            border-right: 1px solid #ddd;
+            max-height: 800px;
+            overflow-y: auto;
+        }
+        
+        .form-group {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        
+        .form-label {
+            text-align: right;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .form-input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #0066cc;
+        }
+        
+        .radio-group {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary {
+            background: #0066cc;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0052a3;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .btn-fit {
+            font-size: 16px;
+            font-weight: bold;
+            padding: 12px 24px;
+            width: 100%;
+        }
+        
+        .result-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+        
+        .result-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .result-value {
+            background: #e3f2fd;
+            color: #0066cc;
+            font-weight: 500;
+        }
+        
+        .result-r2 {
+            background: #fff3e0;
+            color: #f57c00;
+            font-weight: bold;
+        }
+        
+        .equation-display {
+            text-align: center;
+            font-size: 18px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            margin: 15px 0;
+            font-style: italic;
+        }
+        
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .data-input-section {
+            max-height: 300px;
+            overflow-x: auto;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            background: #fafafa;
+        }
+        
+        .data-table {
+            display: inline-block;
+            min-width: 100%;
+        }
+        
+        .data-row {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .data-cell {
+            min-width: 80px;
+            text-align: center;
+        }
+        
+        .data-header {
+            font-weight: bold;
+            background: #e3f2fd;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        
+        .data-input-cell {
+            width: 80px;
+            padding: 6px;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        
+        .chart-container {
+            flex: 1;
+            position: relative;
+            min-height: 400px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧控制面板 -->
+        <div class="panel left-panel">
+            <div class="panel-title">参数设置</div>
+            
+            <div class="alert alert-success" id="successAlert"></div>
+            <div class="alert alert-error" id="errorAlert"></div>
+            
+            <div class="form-group">
+                <label class="form-label">初始参数 C:</label>
+                <input type="number" class="form-input" id="paramC" value="142.72" step="any">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">初始参数 C1:</label>
+                <input type="number" class="form-input" id="paramC1" value="-770.60" step="any">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">初始参数 C2:</label>
+                <input type="number" class="form-input" id="paramC2" value="4.22664" step="any">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">初始参数 k:</label>
+                <input type="number" class="form-input" id="paramK" value="0.29397" step="any">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">数据输入方式:</label>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="dataSource" value="manual" checked>
+                        手动输入
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="dataSource" value="file">
+                        文件导入
+                    </label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">X采样点数:</label>
+                <input type="number" class="form-input" id="numPoints" value="10" min="2" max="1000">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">数据文件:</label>
+                <div>
+                    <input type="file" class="file-input" id="fileInput" accept=".xlsx,.xls,.csv">
+                    <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">
+                        导入Excel文件
+                    </button>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label"></label>
+                <button class="btn btn-primary" onclick="generateInputFields()">生成Y数据输入框</button>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label"></label>
+                <button class="btn btn-primary btn-fit" onclick="performFitting()">执行拟合</button>
+            </div>
+            
+            <div class="result-section">
+                <div class="result-title">拟合结果:</div>
+                
+                <div class="form-group">
+                    <label class="form-label">C =</label>
+                    <input type="text" class="form-input result-value" id="resultC" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">C1 =</label>
+                    <input type="text" class="form-input result-value" id="resultC1" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">C2 =</label>
+                    <input type="text" class="form-input result-value" id="resultC2" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">k =</label>
+                    <input type="text" class="form-input result-value" id="resultK" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">R² =</label>
+                    <input type="text" class="form-input result-r2" id="resultR2" readonly>
+                </div>
+                
+                <div class="result-title" style="margin-top: 20px;">拟合方程:</div>
+                <div class="equation-display" id="equationDisplay">
+                    y = C + C₁/(e<sup>-kt</sup> + C₂)
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧数据输入与可视化 -->
+        <div class="panel right-panel">
+            <div class="panel-title">数据输入与可视化</div>
+            
+            <div class="data-input-section">
+                <div style="font-weight: bold; margin-bottom: 10px;">X和Y数据输入</div>
+                <div id="dataInputContainer"></div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="fittingChart"></canvas>
+            </div>
+        </div>
+    </div>
 
-on:
-  # Runs on pushes targeting the default branch
-  push:
-    branches: ["main"]
-
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
-jobs:
-  # Single deploy job since we're just deploying
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          # Upload entire repository
-          path: '.'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+    <script>
+        // 全局变量
+        let xData = [];
+        let yData = [];
+        let chart = null;
+        
+        // 初始化图表
+        function initChart() {
+            const ctx = document.getElementById('fittingChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: '实际数据',
+                        data: [],
+                        backgroundColor: 'rgb(75, 192, 192)',
+                        borderColor: 'rgb(75, 192, 192)',
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }, {
+                        label: '拟合曲线',
+                        data: [],
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        type: 'line',
+                        pointRadius: 0,
+                        borderWidth: 2,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '非线性曲线拟合',
+                            font: { size: 16 }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 't' },
+                            type: 'linear'
+                        },
+                        y: {
+                            title: { display: true, text: 'w' }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 生成输入框
+        function generateInputFields() {
+            const numPoints = parseInt(document.getElementById('numPoints').value);
+            const container = document.getElementById('dataInputContainer');
+            container.innerHTML = '';
+            
+            // 生成X数据（等间距）
+            xData = [];
+            yData = [];
+            for (let i = 0; i < numPoints; i++) {
+                xData.push(i * 9 / (numPoints - 1));
+                yData.push(0);
+            }
+            
+            // 创建数据表格
+            const table = document.createElement('div');
+            table.className = 'data-table';
+            
+            // 表头行
+            const headerRow = document.createElement('div');
+            headerRow.className = 'data-row';
+            headerRow.innerHTML = '<div class="data-cell data-header">序号</div>';
+            for (let i = 1; i <= numPoints; i++) {
+                headerRow.innerHTML += `<div class="data-cell data-header">${i}</div>`;
+            }
+            table.appendChild(headerRow);
+            
+            // X值行
+            const xRow = document.createElement('div');
+            xRow.className = 'data-row';
+            xRow.innerHTML = '<div class="data-cell data-header">X值</div>';
+            for (let i = 0; i < numPoints; i++) {
+                xRow.innerHTML += `<input type="number" class="data-input-cell" id="x${i}" value="${xData[i].toFixed(4)}" step="any" onchange="updateXData(${i}, this.value)">`;
+            }
+            table.appendChild(xRow);
+            
+            // Y值行
+            const yRow = document.createElement('div');
+            yRow.className = 'data-row';
+            yRow.innerHTML = '<div class="data-cell data-header">Y值</div>';
+            for (let i = 0; i < numPoints; i++) {
+                yRow.innerHTML += `<input type="number" class="data-input-cell" id="y${i}" value="${yData[i]}" step="any" onchange="updateYData(${i}, this.value)">`;
+            }
+            table.appendChild(yRow);
+            
+            container.appendChild(table);
+            
+            // 自动执行拟合
+            performFitting();
+        }
+        
+        // 更新X数据
+        function updateXData(index, value) {
+            xData[index] = parseFloat(value);
+            performFitting();
+        }
+        
+        // 更新Y数据
+        function updateYData(index, value) {
+            yData[index] = parseFloat(value);
+            performFitting();
+        }
+        
+        // 自定义函数
+        function customFunction(params, t) {
+            const [C, C1, C2, k] = params;
+            return C + C1 / (Math.exp(-k * t) + C2);
+        }
+        
+        // Levenberg-Marquardt 算法简化实现
+        function lsqcurvefit(func, initialGuess, xData, yData, maxIter = 1000) {
+            let params = [...initialGuess];
+            const lambda = 0.01;
+            const epsilon = 1e-8;
+            
+            for (let iter = 0; iter < maxIter; iter++) {
+                const residuals = xData.map((x, i) => yData[i] - func(params, x));
+                const sse = residuals.reduce((sum, r) => sum + r * r, 0);
+                
+                // 计算雅可比矩阵（数值微分）
+                const jacobian = [];
+                for (let i = 0; i < xData.length; i++) {
+                    const row = [];
+                    for (let j = 0; j < params.length; j++) {
+                        const delta = params[j] * 1e-8 || 1e-8;
+                        const paramsPlus = [...params];
+                        paramsPlus[j] += delta;
+                        const fPlus = func(paramsPlus, xData[i]);
+                        const f = func(params, xData[i]);
+                        row.push((fPlus - f) / delta);
+                    }
+                    jacobian.push(row);
+                }
+                
+                // 使用math.js求解
+                try {
+                    const J = math.matrix(jacobian);
+                    const JT = math.transpose(J);
+                    const r = math.matrix(residuals);
+                    
+                    const JTJ = math.multiply(JT, J);
+                    const JTr = math.multiply(JT, r);
+                    
+                    // 添加阻尼
+                    for (let i = 0; i < params.length; i++) {
+                        JTJ.set([i, i], JTJ.get([i, i]) * (1 + lambda));
+                    }
+                    
+                    const delta = math.lusolve(JTJ, JTr);
+                    const newParams = params.map((p, i) => p + delta.get([i, 0]));
+                    
+                    // 检查改进
+                    const newResiduals = xData.map((x, i) => yData[i] - func(newParams, x));
+                    const newSse = newResiduals.reduce((sum, r) => sum + r * r, 0);
+                    
+                    if (Math.abs(sse - newSse) < epsilon) {
+                        break;
+                    }
+                    
+                    if (newSse < sse) {
+                        params = newParams;
+                    }
+                } catch (e) {
+                    break;
+                }
+            }
+            
+            return params;
+        }
+        
+        // 执行拟合
+        function performFitting() {
+            if (xData.length === 0 || yData.length === 0) {
+                return;
+            }
+            
+            try {
+                // 获取初始参数
+                const initialGuess = [
+                    parseFloat(document.getElementById('paramC').value),
+                    parseFloat(document.getElementById('paramC1').value),
+                    parseFloat(document.getElementById('paramC2').value),
+                    parseFloat(document.getElementById('paramK').value)
+                ];
+                
+                // 执行拟合
+                const fitParams = lsqcurvefit(customFunction, initialGuess, xData, yData);
+                
+                // 计算R²
+                const yFit = xData.map(x => customFunction(fitParams, x));
+                const SSE = yData.reduce((sum, y, i) => sum + Math.pow(y - yFit[i], 2), 0);
+                const yMean = yData.reduce((sum, y) => sum + y, 0) / yData.length;
+                const SST = yData.reduce((sum, y) => sum + Math.pow(y - yMean, 2), 0);
+                const R2 = 1 - SSE / SST;
+                
+                // 更新结果显示
+                document.getElementById('resultC').value = fitParams[0].toFixed(6);
+                document.getElementById('resultC1').value = fitParams[1].toFixed(6);
+                document.getElementById('resultC2').value = fitParams[2].toFixed(6);
+                document.getElementById('resultK').value = fitParams[3].toFixed(6);
+                document.getElementById('resultR2').value = R2.toFixed(8);
+                
+                // 更新方程显示
+                document.getElementById('equationDisplay').innerHTML = 
+                    `y = ${fitParams[0].toFixed(4)} + ${fitParams[1].toFixed(4)}/(e<sup>-${fitParams[3].toFixed(4)}t</sup> + ${fitParams[2].toFixed(4)})`;
+                
+                // 生成拟合曲线数据
+                const tFit = [];
+                const wFit = [];
+                const minX = Math.min(...xData);
+                const maxX = Math.max(...xData);
+                for (let i = 0; i < 200; i++) {
+                    const t = minX + (maxX - minX) * i / 199;
+                    tFit.push(t);
+                    wFit.push(customFunction(fitParams, t));
+                }
+                
+                // 更新图表
+                chart.data.datasets[0].data = xData.map((x, i) => ({x: x, y: yData[i]}));
+                chart.data.datasets[1].data = tFit.map((t, i) => ({x: t, y: wFit[i]}));
+                chart.options.plugins.title.text = `非线性曲线拟合 (R² = ${R2.toFixed(6)})`;
+                chart.update();
+                
+            } catch (error) {
+                showAlert('error', '拟合失败: ' + error.message);
+            }
+        }
+        
+        // 文件导入处理
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const text = e.target.result;
+                    const lines = text.split('\n').filter(line => line.trim());
+                    
+                    xData = [];
+                    yData = [];
+                    
+                    for (let i = 0; i < lines.length; i++) {
+                        const values = lines[i].split(/[,\t]/).map(v => parseFloat(v.trim()));
+                        if (values.length >= 2 && !isNaN(values[0]) && !isNaN(values[1])) {
+                            xData.push(values[0]);
+                            yData.push(values[1]);
+                        }
+                    }
+                    
+                    if (xData.length > 0) {
+                        document.getElementById('numPoints').value = xData.length;
+                        document.querySelector('input[name="dataSource"][value="file"]').checked = true;
+                        generateInputFields();
+                        
+                        // 更新输入框的值
+                        for (let i = 0; i < xData.length; i++) {
+                            document.getElementById(`x${i}`).value = xData[i].toFixed(4);
+                            document.getElementById(`y${i}`).value = yData[i].toFixed(4);
+                        }
+                        
+                        showAlert('success', `成功导入 ${xData.length} 个数据点`);
+                    } else {
+                        showAlert('error', '文件格式不正确或没有有效数据');
+                    }
+                } catch (error) {
+                    showAlert('error', '文件导入失败: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+        
+        // 显示提示信息
+        function showAlert(type, message) {
+            const alertId = type === 'success' ? 'successAlert' : 'errorAlert';
+            const alert = document.getElementById(alertId);
+            alert.textContent = message;
+            alert.style.display = 'block';
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 初始化
+        window.onload = function() {
+            initChart();
+            generateInputFields();
+        };
+    </script>
+</body>
+</html>
