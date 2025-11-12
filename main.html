@@ -3,364 +3,567 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>fit tool</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <title>非线性曲线拟合工具</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
-            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
         }
-        
+
         .container {
-            max-width: 1700px;
+            max-width: 1400px;
             margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1.2fr 2fr;
-            gap: 20px;
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
             overflow: hidden;
         }
-        
-        .panel {
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            margin-bottom: 5px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
             padding: 20px;
         }
-        
+
+        @media (min-width: 1024px) {
+            .main-content {
+                grid-template-columns: 400px 1fr;
+            }
+        }
+
+        .panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
         .panel-title {
-            font-size: 18px;
+            font-size: 1.2rem;
             font-weight: bold;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #0066cc;
-            color: #333;
-        }
-        
-        .left-panel {
-            border-right: 1px solid #ddd;
-            max-height: 800px;
-            overflow-y: auto;
-        }
-        
-        .form-group {
-            display: grid;
-            grid-template-columns: 120px 1fr;
-            gap: 10px;
+            color: #667eea;
             margin-bottom: 15px;
-            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
         }
-        
-        .form-label {
-            text-align: right;
-            font-weight: 500;
-            color: #555;
+
+        .form-group {
+            margin-bottom: 15px;
         }
-        
-        .form-input {
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+            font-size: 0.9rem;
         }
-        
-        .form-input:focus {
+
+        .form-group input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input[type="number"]:focus {
             outline: none;
-            border-color: #0066cc;
+            border-color: #667eea;
         }
-        
+
         .radio-group {
             display: flex;
             gap: 20px;
+            flex-wrap: wrap;
         }
-        
-        .radio-label {
+
+        .radio-group label {
             display: flex;
             align-items: center;
             gap: 5px;
             cursor: pointer;
         }
-        
+
         .btn {
-            padding: 10px 20px;
+            width: 100%;
+            padding: 12px;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
+            transition: all 0.3s;
+            margin-top: 10px;
         }
-        
+
         .btn-primary {
-            background: #0066cc;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
         }
-        
+
         .btn-primary:hover {
-            background: #0052a3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
-        
+
         .btn-secondary {
             background: #6c757d;
             color: white;
         }
-        
+
         .btn-secondary:hover {
-            background: #545b62;
+            background: #5a6268;
         }
-        
-        .btn-fit {
-            font-size: 16px;
-            font-weight: bold;
-            padding: 12px 24px;
-            width: 100%;
-        }
-        
-        .result-section {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 2px solid #eee;
-        }
-        
-        .result-title {
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 15px;
-            color: #333;
-        }
-        
-        .result-value {
-            background: #e3f2fd;
-            color: #0066cc;
-            font-weight: 500;
-        }
-        
-        .result-r2 {
-            background: #fff3e0;
-            color: #f57c00;
-            font-weight: bold;
-        }
-        
-        .equation-display {
-            text-align: center;
-            font-size: 18px;
-            padding: 20px;
-            background: #f9f9f9;
-            border-radius: 4px;
-            margin: 15px 0;
-            font-style: italic;
-        }
-        
-        .right-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        
-        .data-input-section {
-            max-height: 300px;
-            overflow-x: auto;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+
+        .results {
+            background: white;
             padding: 15px;
-            background: #fafafa;
+            border-radius: 6px;
+            margin-top: 20px;
         }
-        
+
+        .result-item {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .result-value {
+            padding: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #0066cc;
+        }
+
+        .equation {
+            text-align: center;
+            font-size: 1.1rem;
+            margin: 15px 0;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 6px;
+            color: #856404;
+        }
+
+        .data-input-container {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
         .data-table {
-            display: inline-block;
+            display: grid;
+            gap: 10px;
             min-width: 100%;
         }
-        
+
         .data-row {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 10px;
+            display: grid;
+            grid-template-columns: 60px 1fr 1fr;
+            gap: 10px;
+            align-items: center;
         }
-        
-        .data-cell {
-            min-width: 80px;
-            text-align: center;
+
+        @media (max-width: 768px) {
+            .data-row {
+                grid-template-columns: 50px 1fr 1fr;
+            }
         }
-        
+
         .data-header {
             font-weight: bold;
-            background: #e3f2fd;
-            padding: 8px;
-            border-radius: 4px;
-        }
-        
-        .data-input-cell {
-            width: 80px;
-            padding: 6px;
             text-align: center;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            color: #667eea;
         }
-        
+
+        .data-input {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .data-index {
+            text-align: center;
+            font-weight: 600;
+            color: #666;
+        }
+
         .chart-container {
-            flex: 1;
             position: relative;
-            min-height: 400px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: white;
+            height: 400px;
+            margin-top: 20px;
         }
-        
-        .file-input {
-            display: none;
+
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 300px;
+            }
         }
-        
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
         .alert {
             padding: 12px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            display: none;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: 500;
         }
-        
+
         .alert-success {
             background: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
         }
-        
+
         .alert-error {
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="panel left-panel">
-            <div class="panel-title">参数设置</div>
-            
-            <div class="alert alert-success" id="successAlert"></div>
-            <div class="alert alert-error" id="errorAlert"></div>
-            
-            <div class="form-group">
-                <label class="form-label">初始参数 C:</label>
-                <input type="number" class="form-input" id="paramC" value="142.72" step="any">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">初始参数 C1:</label>
-                <input type="number" class="form-input" id="paramC1" value="-770.60" step="any">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">初始参数 C2:</label>
-                <input type="number" class="form-input" id="paramC2" value="4.22664" step="any">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">初始参数 k:</label>
-                <input type="number" class="form-input" id="paramK" value="0.29397" step="any">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">数据输入方式:</label>
-                <div class="radio-group">
-                    <label class="radio-label">
-                        <input type="radio" name="dataSource" value="manual" checked>
-                        手动输入
-                    </label>
-                    <label class="radio-label">
-                        <input type="radio" name="dataSource" value="file">
-                        文件导入
-                    </label>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">X采样点数:</label>
-                <input type="number" class="form-input" id="numPoints" value="10" min="2" max="1000">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">数据文件:</label>
-                <div>
-                    <input type="file" class="file-input" id="fileInput" accept=".xlsx,.xls,.csv">
-                    <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">
-                        导入Excel文件
+        <div class="header">
+            <h1>📈 非线性曲线拟合工具</h1>
+            <p>y = C + C₁/(e^(-kt) + C₂)</p>
+        </div>
+
+        <div class="main-content">
+            <!-- 左侧控制面板 -->
+            <div class="left-panel">
+                <div class="panel">
+                    <div class="panel-title">参数设置</div>
+                    
+                    <div class="form-group">
+                        <label>初始参数 C:</label>
+                        <input type="number" id="paramC" value="142.72" step="any">
+                    </div>
+
+                    <div class="form-group">
+                        <label>初始参数 C₁:</label>
+                        <input type="number" id="paramC1" value="-770.60" step="any">
+                    </div>
+
+                    <div class="form-group">
+                        <label>初始参数 C₂:</label>
+                        <input type="number" id="paramC2" value="4.22664" step="any">
+                    </div>
+
+                    <div class="form-group">
+                        <label>初始参数 k:</label>
+                        <input type="number" id="paramK" value="0.29397" step="any">
+                    </div>
+
+                    <div class="form-group">
+                        <label>数据输入方式:</label>
+                        <div class="radio-group">
+                            <label>
+                                <input type="radio" name="dataSource" value="manual" checked>
+                                手动输入
+                            </label>
+                            <label>
+                                <input type="radio" name="dataSource" value="file">
+                                文件导入
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>X采样点数:</label>
+                        <input type="number" id="numPoints" value="10" min="2" max="1000" step="1">
+                    </div>
+
+                    <div class="form-group">
+                        <label>数据文件 (CSV/Excel):</label>
+                        <div class="file-input-wrapper">
+                            <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">
+                                导入文件
+                            </button>
+                            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+                        </div>
+                    </div>
+
+                    <button class="btn btn-secondary" onclick="generateInputFields()">
+                        生成Y数据输入框
                     </button>
+
+                    <button class="btn btn-primary" onclick="performFitting()">
+                        🚀 执行拟合
+                    </button>
+
+                    <div class="results">
+                        <div class="panel-title" style="font-size: 1rem;">拟合结果</div>
+                        <div class="result-item">
+                            <span class="result-label">C =</span>
+                            <span class="result-value" id="resultC">0.000000</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">C₁ =</span>
+                            <span class="result-value" id="resultC1">0.000000</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">C₂ =</span>
+                            <span class="result-value" id="resultC2">0.000000</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">k =</span>
+                            <span class="result-value" id="resultK">0.000000</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">R² =</span>
+                            <span class="result-value" id="resultR2" style="color: #ff6b00; font-weight: bold;">0.00000000</span>
+                        </div>
+                        <div class="equation" id="equationDisplay">
+                            y = C + C₁/(e^(-kt) + C₂)
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <div class="form-group">
-                <label class="form-label"></label>
-                <button class="btn btn-primary" onclick="generateInputFields()">生成Y数据输入框</button>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label"></label>
-                <button class="btn btn-primary btn-fit" onclick="performFitting()">执行拟合</button>
-            </div>
-            
-            <div class="result-section">
-                <div class="result-title">拟合结果:</div>
-                
-                <div class="form-group">
-                    <label class="form-label">C =</label>
-                    <input type="text" class="form-input result-value" id="resultC" readonly>
+
+            <!-- 右侧面板 -->
+            <div class="right-panel">
+                <div class="panel">
+                    <div class="panel-title">数据输入</div>
+                    <div class="data-input-container" id="dataInputContainer">
+                        <!-- 动态生成的输入框 -->
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label class="form-label">C1 =</label>
-                    <input type="text" class="form-input result-value" id="resultC1" readonly>
+
+                <div class="panel">
+                    <div class="panel-title">拟合曲线</div>
+                    <div class="chart-container">
+                        <canvas id="fittingChart"></canvas>
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label class="form-label">C2 =</label>
-                    <input type="text" class="form-input result-value" id="resultC2" readonly>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">k =</label>
-                    <input type="text" class="form-input result-value" id="resultK" readonly>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">R² =</label>
-                    <input type="text" class="form-input result-r2" id="resultR2" readonly>
-                </div>
-                
-                <div class="result-title" style="margin-top: 20px;">拟合方程:</div>
-                <div class="equation-display" id="equationDisplay">
-                    y = C + C₁/(e<sup>-kt</sup> + C₂)
-                </div>
-            </div>
-        </div>
-        
-         <div class="panel right-panel">
-            <div class="panel-title">数据输入与可视化</div>
-            
-            <div class="data-input-section">
-                <div style="font-weight: bold; margin-bottom: 10px;">X和Y数据输入</div>
-                <div id="dataInputContainer"></div>
-            </div>
-            
-            <div class="chart-container">
-                <canvas id="fittingChart"></canvas>
             </div>
         </div>
+
+        <div id="alertContainer"></div>
     </div>
 
     <script>
-
         let xData = [];
         let yData = [];
         let chart = null;
-        
 
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            generateInputFields();
+            initChart();
+        });
+
+        // 文件导入
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const content = event.target.result;
+                    Papa.parse(content, {
+                        complete: function(results) {
+                            const data = results.data.filter(row => row.length >= 2 && row[0] && row[1]);
+                            if (data.length === 0) {
+                                showAlert('文件中没有有效数据', 'error');
+                                return;
+                            }
+                            
+                            xData = data.map(row => parseFloat(row[0]));
+                            yData = data.map(row => parseFloat(row[1]));
+                            
+                            document.getElementById('numPoints').value = xData.length;
+                            document.querySelector('input[name="dataSource"][value="file"]').checked = true;
+                            
+                            generateInputFields();
+                            showAlert(`成功导入 ${xData.length} 个数据点`, 'success');
+                        },
+                        error: function() {
+                            showAlert('文件解析失败', 'error');
+                        }
+                    });
+                } catch (error) {
+                    showAlert('文件读取失败: ' + error.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // 生成输入框
+        function generateInputFields() {
+            const numPoints = parseInt(document.getElementById('numPoints').value);
+            const container = document.getElementById('dataInputContainer');
+            const isFileMode = document.querySelector('input[name="dataSource"][value="file"]').checked;
+            
+            if (!isFileMode || xData.length !== numPoints) {
+                xData = Array.from({length: numPoints}, (_, i) => i * 9 / (numPoints - 1));
+                yData = Array(numPoints).fill(0);
+            }
+            
+            let html = '<div class="data-table">';
+            html += '<div class="data-row">';
+            html += '<div class="data-header">序号</div>';
+            html += '<div class="data-header">X值</div>';
+            html += '<div class="data-header">Y值</div>';
+            html += '</div>';
+            
+            for (let i = 0; i < numPoints; i++) {
+                html += '<div class="data-row">';
+                html += `<div class="data-index">${i + 1}</div>`;
+                html += `<input type="number" class="data-input" id="x${i}" value="${xData[i].toFixed(4)}" step="any" onchange="updateData()">`;
+                html += `<input type="number" class="data-input" id="y${i}" value="${yData[i].toFixed(4)}" step="any" onchange="updateData()">`;
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+            
+            performFitting();
+        }
+
+        // 更新数据
+        function updateData() {
+            const numPoints = parseInt(document.getElementById('numPoints').value);
+            for (let i = 0; i < numPoints; i++) {
+                xData[i] = parseFloat(document.getElementById(`x${i}`).value);
+                yData[i] = parseFloat(document.getElementById(`y${i}`).value);
+            }
+            performFitting();
+        }
+
+        // 自定义函数
+        function customFunction(params, t) {
+            const [C, C1, C2, k] = params;
+            return t.map(ti => C + C1 / (Math.exp(-k * ti) + C2));
+        }
+
+        // 简化的非线性拟合（最小二乘法 + 梯度下降）
+        function lsqcurvefit(func, initialGuess, xData, yData) {
+            let params = [...initialGuess];
+            const learningRate = 0.001;
+            const maxIterations = 10000;
+            const epsilon = 1e-8;
+            
+            for (let iter = 0; iter < maxIterations; iter++) {
+                const yPred = func(params, xData);
+                const residuals = yData.map((y, i) => y - yPred[i]);
+                const error = residuals.reduce((sum, r) => sum + r * r, 0);
+                
+                if (error < epsilon) break;
+                
+                // 数值梯度计算
+                const gradients = params.map((p, idx) => {
+                    const delta = 1e-6;
+                    const paramsPlus = [...params];
+                    paramsPlus[idx] += delta;
+                    const yPlus = func(paramsPlus, xData);
+                    const errorPlus = yData.reduce((sum, y, i) => sum + Math.pow(y - yPlus[i], 2), 0);
+                    return (errorPlus - error) / delta;
+                });
+                
+                // 更新参数
+                params = params.map((p, i) => p - learningRate * gradients[i]);
+            }
+            
+            return params;
+        }
+
+        // 执行拟合
+        function performFitting() {
+            if (xData.length === 0 || yData.length === 0) return;
+            
+            try {
+                const initialGuess = [
+                    parseFloat(document.getElementById('paramC').value),
+                    parseFloat(document.getElementById('paramC1').value),
+                    parseFloat(document.getElementById('paramC2').value),
+                    parseFloat(document.getElementById('paramK').value)
+                ];
+                
+                const fitParams = lsqcurvefit(customFunction, initialGuess, xData, yData);
+                
+                // 计算R²
+                const yFit = customFunction(fitParams, xData);
+                const SSE = yData.reduce((sum, y, i) => sum + Math.pow(y - yFit[i], 2), 0);
+                const yMean = yData.reduce((sum, y) => sum + y, 0) / yData.length;
+                const SST = yData.reduce((sum, y) => sum + Math.pow(y - yMean, 2), 0);
+                const R2 = 1 - SSE / SST;
+                
+                // 更新结果显示
+                document.getElementById('resultC').textContent = fitParams[0].toFixed(6);
+                document.getElementById('resultC1').textContent = fitParams[1].toFixed(6);
+                document.getElementById('resultC2').textContent = fitParams[2].toFixed(6);
+                document.getElementById('resultK').textContent = fitParams[3].toFixed(6);
+                document.getElementById('resultR2').textContent = R2.toFixed(8);
+                
+                // 更新方程显示
+                document.getElementById('equationDisplay').textContent = 
+                    `y = ${fitParams[0].toFixed(4)} + ${fitParams[1].toFixed(4)}/(e^(-${fitParams[3].toFixed(4)}t) + ${fitParams[2].toFixed(4)})`;
+                
+                // 绘制图表
+                updateChart(fitParams, R2);
+                
+            } catch (error) {
+                showAlert('拟合失败: ' + error.message, 'error');
+            }
+        }
+
+        // 初始化图表
         function initChart() {
             const ctx = document.getElementById('fittingChart').getContext('2d');
             chart = new Chart(ctx, {
@@ -369,18 +572,17 @@
                     datasets: [{
                         label: '实际数据',
                         data: [],
-                        backgroundColor: 'rgb(75, 192, 192)',
-                        borderColor: 'rgb(75, 192, 192)',
-                        pointRadius: 6,
-                        pointHoverRadius: 8
+                        backgroundColor: 'rgb(102, 126, 234)',
+                        borderColor: 'rgb(102, 126, 234)',
+                        pointRadius: 6
                     }, {
                         label: '拟合曲线',
                         data: [],
+                        type: 'line',
                         borderColor: 'rgb(255, 99, 132)',
                         backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                        type: 'line',
-                        pointRadius: 0,
                         borderWidth: 2,
+                        pointRadius: 0,
                         tension: 0.4
                     }]
                 },
@@ -400,8 +602,7 @@
                     },
                     scales: {
                         x: {
-                            title: { display: true, text: 't' },
-                            type: 'linear'
+                            title: { display: true, text: 't' }
                         },
                         y: {
                             title: { display: true, text: 'w' }
@@ -410,254 +611,35 @@
                 }
             });
         }
-        
 
-        function generateInputFields() {
-            const numPoints = parseInt(document.getElementById('numPoints').value);
-            const container = document.getElementById('dataInputContainer');
-            container.innerHTML = '';
+        // 更新图表
+        function updateChart(fitParams, R2) {
+            const actualData = xData.map((x, i) => ({x: x, y: yData[i]}));
             
-
-            xData = [];
-            yData = [];
-            for (let i = 0; i < numPoints; i++) {
-                xData.push(i * 9 / (numPoints - 1));
-                yData.push(0);
-            }
+            const minX = Math.min(...xData);
+            const maxX = Math.max(...xData);
+            const tFit = Array.from({length: 200}, (_, i) => minX + (maxX - minX) * i / 199);
+            const wFit = customFunction(fitParams, tFit);
+            const fittedData = tFit.map((t, i) => ({x: t, y: wFit[i]}));
             
-
-            const table = document.createElement('div');
-            table.className = 'data-table';
-            
-
-            const headerRow = document.createElement('div');
-            headerRow.className = 'data-row';
-            headerRow.innerHTML = '<div class="data-cell data-header">序号</div>';
-            for (let i = 1; i <= numPoints; i++) {
-                headerRow.innerHTML += `<div class="data-cell data-header">${i}</div>`;
-            }
-            table.appendChild(headerRow);
-            
-
-            const xRow = document.createElement('div');
-            xRow.className = 'data-row';
-            xRow.innerHTML = '<div class="data-cell data-header">X值</div>';
-            for (let i = 0; i < numPoints; i++) {
-                xRow.innerHTML += `<input type="number" class="data-input-cell" id="x${i}" value="${xData[i].toFixed(4)}" step="any" onchange="updateXData(${i}, this.value)">`;
-            }
-            table.appendChild(xRow);
-            
-
-            const yRow = document.createElement('div');
-            yRow.className = 'data-row';
-            yRow.innerHTML = '<div class="data-cell data-header">Y值</div>';
-            for (let i = 0; i < numPoints; i++) {
-                yRow.innerHTML += `<input type="number" class="data-input-cell" id="y${i}" value="${yData[i]}" step="any" onchange="updateYData(${i}, this.value)">`;
-            }
-            table.appendChild(yRow);
-            
-            container.appendChild(table);
-            
-
-            performFitting();
+            chart.data.datasets[0].data = actualData;
+            chart.data.datasets[1].data = fittedData;
+            chart.options.plugins.title.text = `非线性曲线拟合 (R² = ${R2.toFixed(6)})`;
+            chart.update();
         }
-        
 
-        function updateXData(index, value) {
-            xData[index] = parseFloat(value);
-            performFitting();
-        }
-        
-
-        function updateYData(index, value) {
-            yData[index] = parseFloat(value);
-            performFitting();
-        }
-        
-
-        function customFunction(params, t) {
-            const [C, C1, C2, k] = params;
-            return C + C1 / (Math.exp(-k * t) + C2);
-        }
-        
-
-        function lsqcurvefit(func, initialGuess, xData, yData, maxIter = 1000) {
-            let params = [...initialGuess];
-            const lambda = 0.01;
-            const epsilon = 1e-8;
-            
-            for (let iter = 0; iter < maxIter; iter++) {
-                const residuals = xData.map((x, i) => yData[i] - func(params, x));
-                const sse = residuals.reduce((sum, r) => sum + r * r, 0);
-                
-
-                const jacobian = [];
-                for (let i = 0; i < xData.length; i++) {
-                    const row = [];
-                    for (let j = 0; j < params.length; j++) {
-                        const delta = params[j] * 1e-8 || 1e-8;
-                        const paramsPlus = [...params];
-                        paramsPlus[j] += delta;
-                        const fPlus = func(paramsPlus, xData[i]);
-                        const f = func(params, xData[i]);
-                        row.push((fPlus - f) / delta);
-                    }
-                    jacobian.push(row);
-                }
-                
-
-                try {
-                    const J = math.matrix(jacobian);
-                    const JT = math.transpose(J);
-                    const r = math.matrix(residuals);
-                    
-                    const JTJ = math.multiply(JT, J);
-                    const JTr = math.multiply(JT, r);
-                    
-
-                    for (let i = 0; i < params.length; i++) {
-                        JTJ.set([i, i], JTJ.get([i, i]) * (1 + lambda));
-                    }
-                    
-                    const delta = math.lusolve(JTJ, JTr);
-                    const newParams = params.map((p, i) => p + delta.get([i, 0]));
-                    
-
-                    const newResiduals = xData.map((x, i) => yData[i] - func(newParams, x));
-                    const newSse = newResiduals.reduce((sum, r) => sum + r * r, 0);
-                    
-                    if (Math.abs(sse - newSse) < epsilon) {
-                        break;
-                    }
-                    
-                    if (newSse < sse) {
-                        params = newParams;
-                    }
-                } catch (e) {
-                    break;
-                }
-            }
-            
-            return params;
-        }
-        
-
-        function performFitting() {
-            if (xData.length === 0 || yData.length === 0) {
-                return;
-            }
-            
-            try {
-
-                const initialGuess = [
-                    parseFloat(document.getElementById('paramC').value),
-                    parseFloat(document.getElementById('paramC1').value),
-                    parseFloat(document.getElementById('paramC2').value),
-                    parseFloat(document.getElementById('paramK').value)
-                ];
-                
-
-                const fitParams = lsqcurvefit(customFunction, initialGuess, xData, yData);
-                
-
-                const yFit = xData.map(x => customFunction(fitParams, x));
-                const SSE = yData.reduce((sum, y, i) => sum + Math.pow(y - yFit[i], 2), 0);
-                const yMean = yData.reduce((sum, y) => sum + y, 0) / yData.length;
-                const SST = yData.reduce((sum, y) => sum + Math.pow(y - yMean, 2), 0);
-                const R2 = 1 - SSE / SST;
-                
-
-                document.getElementById('resultC').value = fitParams[0].toFixed(6);
-                document.getElementById('resultC1').value = fitParams[1].toFixed(6);
-                document.getElementById('resultC2').value = fitParams[2].toFixed(6);
-                document.getElementById('resultK').value = fitParams[3].toFixed(6);
-                document.getElementById('resultR2').value = R2.toFixed(8);
-                
-
-                document.getElementById('equationDisplay').innerHTML = 
-                    `y = ${fitParams[0].toFixed(4)} + ${fitParams[1].toFixed(4)}/(e<sup>-${fitParams[3].toFixed(4)}t</sup> + ${fitParams[2].toFixed(4)})`;
-                
-
-                const tFit = [];
-                const wFit = [];
-                const minX = Math.min(...xData);
-                const maxX = Math.max(...xData);
-                for (let i = 0; i < 200; i++) {
-                    const t = minX + (maxX - minX) * i / 199;
-                    tFit.push(t);
-                    wFit.push(customFunction(fitParams, t));
-                }
-                
-
-                chart.data.datasets[0].data = xData.map((x, i) => ({x: x, y: yData[i]}));
-                chart.data.datasets[1].data = tFit.map((t, i) => ({x: t, y: wFit[i]}));
-                chart.options.plugins.title.text = `非线性曲线拟合 (R² = ${R2.toFixed(6)})`;
-                chart.update();
-                
-            } catch (error) {
-                showAlert('error', '拟合失败: ' + error.message);
-            }
-        }
-        
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const text = e.target.result;
-                    const lines = text.split('\n').filter(line => line.trim());
-                    
-                    xData = [];
-                    yData = [];
-                    
-                    for (let i = 0; i < lines.length; i++) {
-                        const values = lines[i].split(/[,\t]/).map(v => parseFloat(v.trim()));
-                        if (values.length >= 2 && !isNaN(values[0]) && !isNaN(values[1])) {
-                            xData.push(values[0]);
-                            yData.push(values[1]);
-                        }
-                    }
-                    
-                    if (xData.length > 0) {
-                        document.getElementById('numPoints').value = xData.length;
-                        document.querySelector('input[name="dataSource"][value="file"]').checked = true;
-                        generateInputFields();
-                        
-
-                        for (let i = 0; i < xData.length; i++) {
-                            document.getElementById(`x${i}`).value = xData[i].toFixed(4);
-                            document.getElementById(`y${i}`).value = yData[i].toFixed(4);
-                        }
-                        
-                        showAlert('success', `成功导入 ${xData.length} 个数据点`);
-                    } else {
-                        showAlert('error', '文件格式不正确或没有有效数据');
-                    }
-                } catch (error) {
-                    showAlert('error', '文件导入失败: ' + error.message);
-                }
-            };
-            reader.readAsText(file);
-        });
-        
-
-        function showAlert(type, message) {
-            const alertId = type === 'success' ? 'successAlert' : 'errorAlert';
-            const alert = document.getElementById(alertId);
+        // 显示提示信息
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
             alert.textContent = message;
-            alert.style.display = 'block';
+            container.appendChild(alert);
+            
             setTimeout(() => {
-                alert.style.display = 'none';
+                alert.remove();
             }, 3000);
         }
-        
-
-        window.onload = function() {
-            initChart();
-            generateInputFields();
-        };
     </script>
 </body>
 </html>
